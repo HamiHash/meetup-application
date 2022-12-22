@@ -1,70 +1,67 @@
-// import MeetupDetail from "../../components/meetups/MeetupDetail";
-// import Head from "next/head";
-// import { Fragment } from "react";
-// import { useRouter } from "next/router";
+import { MongoClient, ObjectId } from "mongodb";
 
-// let placeId;
-// let dbId;
-// function MeetupDetails(props) {
-//   router = useRouter();
-//   placeId = router.pathname.slice(1);
-//   dbId = props.meetupData.id;
-//   return (
-//     <Fragment>
-//       <Head>
-//         <title>{props.meetupData.title}</title>
-//       </Head>
-//       <MeetupDetail
-//         image={props.meetupData.image}
-//         title={props.meetupData.title}
-//         address={props.meetupData.address}
-//         description={props.meetupData.description}
-//       />
-//     </Fragment>
-//   );
-// }
+import MeetupDetail from "../../components/meetups/MeetupDetail";
 
-// export function getStaticPaths() {
-//   return {
-//     fallback: false,
-//     paths: [
-//       {
-//         params: {
-//           meetupId: placeId,
-//         },
-//       },
-//     ],
-//   };
-// }
+function MeetupDetails(props) {
+  return (
+    <MeetupDetail
+      image={props.meetupData.image}
+      title={props.meetupData.title}
+      address={props.meetupData.address}
+      description={props.meetupData.description}
+    />
+  );
+}
 
-// export async function getStaticProps(context) {
-//   // fetch
-//   const client = await MongoClient.connect(
-//     "mongodb+srv://UserNo1:88714659@atlascluster.ra9n7jk.mongodb.net/meetups?retryWrites=true&w=majority"
-//   );
-//   const db = client.db();
+export async function getStaticPaths() {
+  const client = await MongoClient.connect(
+    "mongodb+srv://maximilian:arlAapzPqFyo4xUk@cluster0.ntrwp.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
 
-//   const meetupsCollection = db.collection("meetups");
+  const meetupsCollection = db.collection("meetups");
 
-//   const data = await meetupsCollection.find().toArray();
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
 
-//   client.close();
+  client.close();
 
-//   // const meetupsdata = data
-//   //   .filter((i) => i._id.toString() !== placeId)
-//   //   .map((i) => ({
-//   //     title: i.title,
-//   //     image: i.image,
-//   //     address: i.address,
-//   //     description: i.description,
-//   //     id: i._id.toString(),
-//   //   }));
-//   return {
-//     props: {
-//       meetups: data,
-//     },
-//     revalidate: 1, //? /////// if data changes frequently (we regenerate every 1 sec here)
-//   };
-// }
+  return {
+    fallback: "blocking",
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
+  };
+}
+
+export async function getStaticProps(context) {
+  // fetch data for a single meetup
+
+  const meetupId = context.params.meetupId;
+
+  const client = await MongoClient.connect(
+    "mongodb+srv://UserNo1:88714659@atlascluster.ra9n7jk.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId),
+  });
+
+  client.close();
+
+  return {
+    props: {
+      meetupData: {
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        address: selectedMeetup.address,
+        image: selectedMeetup.image,
+        description: selectedMeetup.description,
+      },
+    },
+  };
+}
 
 export default MeetupDetails;
