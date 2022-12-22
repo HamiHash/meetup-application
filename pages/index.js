@@ -1,26 +1,57 @@
+import Head from "next/head";
 import MeetupList from "../components/meetups/MeetupList";
+import { MongoClient } from "mongodb";
+import { Fragment } from "react";
 
-const DUMMY_MEETUPS = [
-  {
-    id: 1,
-    title: "A First Meetup",
-    image:
-      "https://images.unsplash.com/photo-1543872084-c7bd3822856f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    address: "Some address 5, 1235 some city",
-    description: "This is the first meetup",
-  },
-  {
-    id: 2,
-    title: "A First Meetup",
-    image:
-      "https://images.unsplash.com/photo-1543872084-c7bd3822856f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    address: "Some address 5, 1235 some city",
-    description: "This is the second meetup",
-  },
-];
-
-function HomePage() {
-  return <MeetupList meetups={DUMMY_MEETUPS} />;
+//* Data fetching for pre-rendering
+function HomePage(props) {
+  return (
+    <Fragment>
+      <Head>
+        <title>Meetups</title>
+        <meta name="description" content="Me meetups" />
+      </Head>
+      <MeetupList meetups={props.meetups} />;
+    </Fragment>
+  );
 }
+
+export async function getStaticProps() {
+  // fetch
+  const client = await MongoClient.connect(
+    "mongodb+srv://UserNo1:88714659@atlascluster.ra9n7jk.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
+
+  return {
+    props: {
+      meetups: meetups.map((i) => ({
+        title: i.title,
+        image: i.image,
+        address: i.address,
+        id: i._id.toString(),
+      })),
+    },
+    revalidate: 1, //? /////// if data changes frequently (we regenerate every 1 sec here)
+  };
+}
+
+// export async function getServerSideProps(context) {
+//   const req = context.req;
+//   const res = context.res;
+//   // fetch
+//   return {
+//     props: {
+//       meetups: DUMMY_MEETUPS,
+//     },
+//     //? getServerSideProps will revalidate on every run
+//   };
+// }
 
 export default HomePage;
